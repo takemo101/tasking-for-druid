@@ -4,7 +4,7 @@ use druid::im::{Vector};
 use druid::kurbo::{Insets};
 use druid::widget::prelude::*;
 use druid::widget::{Flex, Label, TextBox, List, Scroll, ViewSwitcher, Painter, FlexParams, CrossAxisAlignment};
-use druid::{theme, lens, AppLauncher, Data, Lens, Color, Widget, LensExt, WidgetExt, WindowDesc};
+use druid::{commands, theme, lens, AppDelegate, AppLauncher, Command, Handled, Target, DelegateCtx, Data, Lens, Color, Widget, LensExt, WidgetExt, WindowDesc};
 
 mod model;
 use model::{TaskStatus, Task, Tasks, TaskRepository};
@@ -53,6 +53,7 @@ fn main() {
 
     // start the application. Here we pass in the application state.
     AppLauncher::with_window(main_window)
+        .delegate(Delegate)
         .log_to_console()
         .configure_env(|env, _| {
             env.set(theme::WINDOW_BACKGROUND_COLOR, Color::WHITE);
@@ -64,6 +65,25 @@ fn main() {
         })
         .launch(initial_state)
         .expect("アプリケーションを起動できませんでした");
+}
+
+struct Delegate;
+
+impl AppDelegate<TaskState> for Delegate {
+    fn command(
+        &mut self,
+        ctx: &mut DelegateCtx,
+        _: Target,
+        cmd: &Command,
+        _: &mut TaskState,
+        _: &Env,
+    ) -> Handled {
+        if cmd.is(commands::CLOSE_WINDOW) {
+            ctx.submit_command(commands::QUIT_APP);
+            return Handled::Yes;
+        }
+        Handled::No
+    }
 }
 
 fn make_widget() -> impl Widget<TaskState> {
