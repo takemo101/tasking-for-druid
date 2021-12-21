@@ -14,9 +14,9 @@ const BLOCK_HEIGHT: f64 = 38.0;
 const BORDER_RADIUS: f64 = 4.0;
 const WINDOW_HEIGHT: f64 = 500.0;
 const WINDOW_WIDTH: f64 = 400.0;
+const BLOCK_SPACE: f64 = 10.0;
 const INNER_WIDTH: f64 = WINDOW_WIDTH - (BLOCK_SPACE * 2.0);
 const LINE_HEIGHT: f64 = BLOCK_HEIGHT + (BLOCK_SPACE * 2.0);
-const BLOCK_SPACE: f64 = 10.0;
 
 const TASK_TEXT_SIZE: f64 = 14.0;
 const TASK_BLOCK_HEIGHT: f64 = 24.0;
@@ -94,15 +94,7 @@ fn make_widget() -> impl Widget<TaskState> {
             match flag {
                 true => {
                     let mut panel = Flex::column();
-                    panel.add_child(
-                        make_button::<TaskState>("戻る".to_string(), TEXT_SIZE,(88, 97, 105))
-                            .expand_width()
-                            .fix_height(BLOCK_HEIGHT)
-                            .on_click(|_, data, _| {
-                                data.setting = !data.setting;
-                            })
-                    );
-                    panel.add_spacer(BLOCK_SPACE);
+
                     panel.add_child(
                         TextBox::multiline()
                             .with_text_size(TASK_TEXT_SIZE)
@@ -110,9 +102,19 @@ fn make_widget() -> impl Widget<TaskState> {
                             .fix_height(WINDOW_HEIGHT - LINE_HEIGHT - BLOCK_SPACE)
                             .lens(TaskState::memo)
                     );
+                    panel.add_spacer(BLOCK_SPACE);
+                    panel.add_child(
+                        make_button::<TaskState>("戻る".to_string(), TEXT_SIZE,(88, 97, 105))
+                            .expand_width()
+                            .fix_height(BLOCK_HEIGHT)
+                            .on_click(|_, data, _| {
+                                data.setting = !data.setting;
+                            }),
+                    );
 
                     Box::new(
-                        panel.padding(BLOCK_SPACE),
+                        panel
+                            .padding(BLOCK_SPACE),
                     )
                 },
                 _ => {
@@ -224,7 +226,23 @@ fn make_widget() -> impl Widget<TaskState> {
                                         data.tasks.clear();
                                         data.repository.save(data.tasks.to_save_tasks());
                                     }),
-                                    4.0,
+                                    5.0,
+                            )
+                            .with_spacer(BLOCK_SPACE)
+                            .with_flex_child(
+                                make_button::<TaskState>("整頓".to_string(), TEXT_SIZE,(88, 97, 105))
+                                    .expand_width()
+                                    .fix_height(38.0)
+                                    .on_click(|_, data, _| {
+                                        data.tasks.sort(&vec![
+                                            TaskStatus::New,
+                                            TaskStatus::Progress,
+                                            TaskStatus::Stop,
+                                            TaskStatus::Done,
+                                        ]);
+                                        data.repository.save(data.tasks.to_save_tasks());
+                                    }),
+                                    1.0,
                             )
                             .with_spacer(BLOCK_SPACE)
                             .with_flex_child(
@@ -255,7 +273,11 @@ fn make_widget() -> impl Widget<TaskState> {
                                             }
                                         }
 
-                                        data.memo = text.trim().to_string();
+                                        text = text.trim().to_string();
+
+                                        if text.len() > 0 {
+                                            data.memo = format!("--- task ---\n{}\n------------", text).to_string();
+                                        }
 
                                         data.setting = !data.setting;
                                     }),
@@ -265,7 +287,8 @@ fn make_widget() -> impl Widget<TaskState> {
 
 
                     Box::new(
-                        column.padding(BLOCK_SPACE),
+                        column
+                            .padding(BLOCK_SPACE),
                     )
                 },
             }

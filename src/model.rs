@@ -138,6 +138,25 @@ impl Tasks {
         self.tasks.retain(|_| false);
     }
 
+    /// sort by statuses
+    pub fn sort(&mut self, statuses: &Vec<TaskStatus>) {
+        if !self.is_empty() {
+            // clone task
+            let tasks = self.tasks.clone();
+
+            // clear
+            self.clear();
+
+            for status in statuses.iter() {
+                for task in tasks.iter() {
+                    if task.status.eq(status) {
+                        self.tasks.push_back(task.clone());
+                    }
+                }
+            }
+        }
+    }
+
     /// is empty
     pub fn is_empty(&self) -> bool {
         self.tasks.is_empty()
