@@ -40,7 +40,7 @@ fn window_height() -> f64 {
 
 #[cfg(target_os = "macos")]
 fn window_height() -> f64 {
-    WINDOW_HEIGHT + (BLOCK_SPACE * 2.0)
+    WINDOW_HEIGHT
 }
 
 fn main() {
