@@ -33,12 +33,22 @@ struct TaskState {
     setting: bool,
 }
 
+#[cfg(target_os = "windows")]
+fn window_height() -> f64 {
+    WINDOW_HEIGHT + (BLOCK_SPACE * 4.0)
+}
+
+#[cfg(target_os = "macos")]
+fn window_height() -> f64 {
+    WINDOW_HEIGHT + (BLOCK_SPACE * 2.0)
+}
+
 fn main() {
     // describe the main window
     let main_window = WindowDesc::new(make_widget())
         .title("Tasking!")
         .resizable(false)
-        .window_size((WINDOW_WIDTH, WINDOW_HEIGHT));
+        .window_size((WINDOW_WIDTH, window_height()));
 
     let repository = TaskRepository::new(SAVE_FILENAME.to_string());
 
@@ -145,72 +155,74 @@ fn make_widget() -> impl Widget<TaskState> {
                                 1.0,
                             )
                     );
+                    let mut scroll = Scroll::new(
+                        ViewSwitcher::new(
+                            |data: &TaskState, _| data.tasks.clone(),
+                            |tasks, _, _| {
+                                match tasks.is_empty() {
+                                    true => {
+                                        Box::new(
+                                            Label::new("タスクはまだありません")
+                                                .with_text_size(TEXT_SIZE)
+                                                .center()
+                                                .fix_width(INNER_WIDTH)
+                                                .fix_height(WINDOW_HEIGHT - (LINE_HEIGHT * 2.0))
+                                        )
+                                    },
+                                    _ => {
+                                        Box::new(
+                                            List::new(|| {
+                                                Flex::row()
+                                                    .with_flex_child(
+                                                        Label::new(|(_, item): &(TaskState, Task), _: &Env| item.content.to_string())
+                                                            .with_text_size(TASK_TEXT_SIZE)
+                                                            .padding(5.0)
+                                                            .expand_width(),
+                                                        5.0,
+                                                    )
+                                                    .with_spacer(BLOCK_SPACE)
+                                                    .with_flex_child(
+                                                        make_status_button(|(_, task): &(TaskState, Task), _| task.status.to_string().to_string(), TASK_TEXT_SIZE)
+                                                            .on_click(|_, (tasks, task): &mut (TaskState, Task), _: &Env| {
+                                                                if let Some(t) = tasks.tasks.find_by_id(task.id) {
+                                                                    t.change_status(task.status.next_status());
+                                                                    tasks.repository.save(tasks.tasks.to_save_tasks());
+                                                                }
+                                                            }),
+                                                        1.2,
+                                                    )
+                                                    .with_spacer(BLOCK_SPACE)
+                                                    .with_flex_child(
+                                                        make_button("削除".to_string(), TASK_TEXT_SIZE, (255, 193, 7))
+                                                            .on_click(|_, (tasks, task): &mut (TaskState, Task), _: &Env| {
+                                                                tasks.tasks.remove_by_id(task.id);
+                                                                tasks.repository.save(tasks.tasks.to_save_tasks());
+                                                            }),
+                                                        FlexParams::new(0.8, CrossAxisAlignment::End),
+                                                    )
+                                                    .with_spacer(BLOCK_SPACE)
+                                                    .fix_height(TASK_BLOCK_HEIGHT)
+                                                    .fix_width(INNER_WIDTH)
+                                            })
+                                            .with_spacing(BLOCK_SPACE)
+                                            .lens(lens::Identity.map(
+                                                |d: &TaskState| (d.clone(), d.tasks.tasks.clone()),
+                                                |d: &mut TaskState, (state, _): (TaskState, Vector<Task>)| {
+                                                    d.tasks = state.tasks;
+                                                    d.content = state.content
+                                                },
+                                            ))
+                                        )
+                                    },
+                                }
+                            }
+                        )
+                    );
+                    scroll.set_horizontal_scroll_enabled(false);
 
                     column.add_spacer(BLOCK_SPACE);
                     column.add_child(
-                        Scroll::new(
-                            ViewSwitcher::new(
-                                |data: &TaskState, _| data.tasks.clone(),
-                                |tasks, _, _| {
-                                    match tasks.is_empty() {
-                                        true => {
-                                            Box::new(
-                                                Label::new("タスクはまだありません")
-                                                    .with_text_size(TEXT_SIZE)
-                                                    .center()
-                                                    .fix_width(INNER_WIDTH)
-                                                    .fix_height(WINDOW_HEIGHT - (LINE_HEIGHT * 2.0))
-                                            )
-                                        },
-                                        _ => {
-                                            Box::new(
-                                                List::new(|| {
-                                                    Flex::row()
-                                                        .with_flex_child(
-                                                            Label::new(|(_, item): &(TaskState, Task), _: &Env| item.content.to_string())
-                                                                .with_text_size(TASK_TEXT_SIZE)
-                                                                .padding(5.0)
-                                                                .expand_width(),
-                                                            5.0,
-                                                        )
-                                                        .with_spacer(BLOCK_SPACE)
-                                                        .with_flex_child(
-                                                            make_status_button(|(_, task): &(TaskState, Task), _| task.status.to_string().to_string(), TASK_TEXT_SIZE)
-                                                                .on_click(|_, (tasks, task): &mut (TaskState, Task), _: &Env| {
-                                                                    if let Some(t) = tasks.tasks.find_by_id(task.id) {
-                                                                        t.change_status(task.status.next_status());
-                                                                        tasks.repository.save(tasks.tasks.to_save_tasks());
-                                                                    }
-                                                                }),
-                                                            1.2,
-                                                        )
-                                                        .with_spacer(BLOCK_SPACE)
-                                                        .with_flex_child(
-                                                            make_button("削除".to_string(), TASK_TEXT_SIZE, (255, 193, 7))
-                                                                .on_click(|_, (tasks, task): &mut (TaskState, Task), _: &Env| {
-                                                                    tasks.tasks.remove_by_id(task.id);
-                                                                    tasks.repository.save(tasks.tasks.to_save_tasks());
-                                                                }),
-                                                            FlexParams::new(0.8, CrossAxisAlignment::End),
-                                                        )
-                                                        .with_spacer(BLOCK_SPACE)
-                                                        .fix_height(TASK_BLOCK_HEIGHT)
-                                                        .fix_width(INNER_WIDTH)
-                                                })
-                                                .with_spacing(BLOCK_SPACE)
-                                                .lens(lens::Identity.map(
-                                                    |d: &TaskState| (d.clone(), d.tasks.tasks.clone()),
-                                                    |d: &mut TaskState, (state, _): (TaskState, Vector<Task>)| {
-                                                        d.tasks = state.tasks;
-                                                        d.content = state.content
-                                                    },
-                                                ))
-                                            )
-                                        },
-                                    }
-                                }
-                            )
-                        )
+                        scroll
                             .fix_width(INNER_WIDTH)
                             .fix_height(WINDOW_HEIGHT - (LINE_HEIGHT * 2.0))
                     );
